@@ -1,17 +1,20 @@
 package be.corsa.launcher
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.compose.runtime.mutableStateOf
 
 /** Réglages enregistrés sur l'autoradio, lus par l'interface en direct. */
-class Prefs(context: Context) {
+class Prefs(private val sp: SharedPreferences?) {
 
-    private val sp = context.applicationContext.getSharedPreferences("corsa", Context.MODE_PRIVATE)
+    constructor(context: Context) : this(
+        context.applicationContext.getSharedPreferences("corsa", Context.MODE_PRIVATE)
+    )
 
-    private val themeState = mutableStateOf(sp.getString(KEY_THEME, "auto") ?: "auto")
-    private val navAppState = mutableStateOf(sp.getString(KEY_NAV, "waze") ?: "waze")
-    private val homeState = mutableStateOf(sp.getString(KEY_HOME, "") ?: "")
-    private val workState = mutableStateOf(sp.getString(KEY_WORK, "") ?: "")
+    private val themeState = mutableStateOf(sp?.getString(KEY_THEME, "auto") ?: "auto")
+    private val navAppState = mutableStateOf(sp?.getString(KEY_NAV, "waze") ?: "waze")
+    private val homeState = mutableStateOf(sp?.getString(KEY_HOME, "") ?: "")
+    private val workState = mutableStateOf(sp?.getString(KEY_WORK, "") ?: "")
 
     /** "nuit", "jour" ou "auto" (selon le soleil). */
     var theme: String
@@ -32,13 +35,16 @@ class Prefs(context: Context) {
         set(value) { workState.value = value; save(KEY_WORK, value) }
 
     private fun save(key: String, value: String) {
-        sp.edit().putString(key, value).apply()
+        sp?.edit()?.putString(key, value)?.apply()
     }
 
-    private companion object {
-        const val KEY_THEME = "theme"
-        const val KEY_NAV = "nav_app"
-        const val KEY_HOME = "fav_home"
-        const val KEY_WORK = "fav_work"
+    companion object {
+        private const val KEY_THEME = "theme"
+        private const val KEY_NAV = "nav_app"
+        private const val KEY_HOME = "fav_home"
+        private const val KEY_WORK = "fav_work"
+
+        /** Réglages en mémoire seulement, pour les captures d'écran. */
+        fun preview(theme: String = "auto"): Prefs = Prefs(null as SharedPreferences?).also { it.theme = theme }
     }
 }

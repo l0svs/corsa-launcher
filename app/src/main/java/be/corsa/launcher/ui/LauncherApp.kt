@@ -79,6 +79,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import be.corsa.launcher.AppEntry
 import be.corsa.launcher.Apps
 import be.corsa.launcher.AudioHub
 import be.corsa.launcher.LocationHub
@@ -97,12 +98,15 @@ private fun hasLocation(context: Context): Boolean =
         ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
 @Composable
-fun LauncherApp() {
+fun LauncherApp(demoSheet: String? = null, demoTheme: String? = null) {
     val context = LocalContext.current
     val prefs = remember { Prefs(context) }
     val mapCtrl = remember { MapController() }
     var now by remember { mutableStateOf(System.currentTimeMillis()) }
-    var sheet by remember { mutableStateOf<Sheet?>(null) }
+    var sheet by remember { mutableStateOf(Sheet.entries.firstOrNull { it.name == demoSheet }) }
+    LaunchedEffect(demoTheme) {
+        if (demoTheme != null && demoTheme in listOf("jour", "nuit", "auto")) prefs.theme = demoTheme
+    }
     var volumeUntil by remember { mutableStateOf(0L) }
     var locationGranted by remember { mutableStateOf(hasLocation(context)) }
 
@@ -141,8 +145,41 @@ fun LauncherApp() {
         "nuit" -> false
         else -> now >= sun.first && now < sun.second
     }
-    val p = if (isDay) DayPalette else NightPalette
+    LauncherScreen(
+        p = if (isDay) DayPalette else NightPalette,
+        prefs = prefs,
+        mapCtrl = mapCtrl,
+        now = now,
+        sunrise = sun.first,
+        sunset = sun.second,
+        sheet = sheet,
+        onSheet = { sheet = it },
+        locationGranted = locationGranted,
+        volumeVisible = volumeUntil > now,
+        onVolumeChanged = { volumeUntil = System.currentTimeMillis() + 2000 },
+    )
+}
+
+/** L'écran complet, sans logique de démarrage : utilisé par l'appli et par les captures d'écran. */
+@Composable
+fun LauncherScreen(
+    p: Palette,
+    prefs: Prefs,
+    mapCtrl: MapController,
+    now: Long,
+    sunrise: Long,
+    sunset: Long,
+    sheet: Sheet?,
+    onSheet: (Sheet?) -> Unit,
+    locationGranted: Boolean,
+    volumeVisible: Boolean,
+    onVolumeChanged: () -> Unit,
+    previewApps: List<AppEntry>? = null,
+) {
+    val context = LocalContext.current
+    val isDay = p.isDay
     val scheme = if (isDay) lightColorScheme(primary = p.accent) else darkColorScheme(primary = p.accent)
+    val toggle: (Sheet) -> Unit = { s -> onSheet(if (sheet == s) null else s) }
 
     MaterialTheme(colorScheme = scheme) {
         Box(Modifier.fillMaxSize().background(p.bg)) {
@@ -151,6 +188,7 @@ fun LauncherApp() {
                     Box(Modifier.weight(0.64f).fillMaxHeight().clipToBounds()) {
                         MapPane(
                             modifier = Modifier.fillMaxSize(),
+                            p = p,
                             styleUrl = if (isDay) MAP_STYLE_DAY else MAP_STYLE_NIGHT,
                             locationGranted = locationGranted,
                             ctrl = mapCtrl,
@@ -161,21 +199,21 @@ fun LauncherApp() {
                             ctrl = mapCtrl,
                             now = now,
                             locationGranted = locationGranted,
-                            onSearch = { sheet = Sheet.Search },
-                            onMusic = { sheet = Sheet.Music },
-                            onSettings = { sheet = Sheet.Settings },
+                            onSearch = { onSheet(Sheet.Search) },
+                            onMusic = { onSheet(Sheet.Music) },
+                            onSettings = { onSheet(Sheet.Settings) },
                         )
-                        val current = sheet
-                        if (current != null) {
+                        if (sheet != null) {
                             SheetHost(
-                                sheet = current,
+                                sheet = sheet,
                                 p = p,
                                 prefs = prefs,
                                 now = now,
-                                sunrise = sun.first,
-                                sunset = sun.second,
-                                onClose = { sheet = null },
-                                onOpen = { sheet = it },
+                                sunrise = sunrise,
+                                sunset = sunset,
+                                onClose = { onSheet(null) },
+                                onOpen = { onSheet(it) },
+                                previewApps = previewApps,
                             )
                         }
                     }
@@ -184,25 +222,25 @@ fun LauncherApp() {
                         modifier = Modifier.weight(0.36f).fillMaxHeight(),
                         p = p,
                         now = now,
-                        onVehicle = { sheet = if (sheet == Sheet.Vehicle) null else Sheet.Vehicle },
+                        onVehicle = { toggle(Sheet.Vehicle) },
                     )
                 }
                 BottomBar(
                     p = p,
                     sheet = sheet,
                     isDay = isDay,
-                    onCar = { sheet = if (sheet == Sheet.Vehicle) null else Sheet.Vehicle },
-                    onMap = { sheet = null },
-                    onMusic = { sheet = if (sheet == Sheet.Music) null else Sheet.Music },
+                    onCar = { toggle(Sheet.Vehicle) },
+                    onMap = { onSheet(null) },
+                    onMusic = { toggle(Sheet.Music) },
                     onPhone = { Apps.dial(context) },
                     onCamera = { Apps.toast(context, "Caméra à la demande : arrive dès qu'on connaît l'appli caméra de l'autoradio") },
-                    onApps = { sheet = if (sheet == Sheet.Apps) null else Sheet.Apps },
+                    onApps = { toggle(Sheet.Apps) },
                     onTheme = { prefs.theme = if (isDay) "nuit" else "jour" },
                     onVoice = { Apps.voice(context) },
-                    onVolumeChanged = { volumeUntil = System.currentTimeMillis() + 2000 },
+                    onVolumeChanged = onVolumeChanged,
                 )
             }
-            if (volumeUntil > now) {
+            if (volumeVisible) {
                 VolumePopup(p, Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 86.dp))
             }
         }

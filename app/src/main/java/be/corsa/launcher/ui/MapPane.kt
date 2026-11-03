@@ -60,7 +60,11 @@ class MapController {
  * et suit la voiture tant qu'on ne la déplace pas.
  */
 @Composable
-fun MapPane(modifier: Modifier, styleUrl: String, locationGranted: Boolean, ctrl: MapController) {
+fun MapPane(modifier: Modifier, p: Palette, styleUrl: String, locationGranted: Boolean, ctrl: MapController) {
+    if (LocalInspectionMode.current) {
+        MapPreview(p, modifier)
+        return
+    }
     val context = LocalContext.current
     val lifecycle = (context as LifecycleOwner).lifecycle
     val mapView = remember { MapView(context).apply { onCreate(null) } }

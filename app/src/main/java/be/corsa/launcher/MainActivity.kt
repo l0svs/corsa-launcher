@@ -17,7 +17,10 @@ class MainActivity : ComponentActivity() {
         MapLibre.getInstance(applicationContext)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         hideSystemBars()
-        setContent { LauncherApp() }
+        // Utilisé uniquement par les captures d'écran automatiques : ouvre un écran précis.
+        val demoSheet = intent?.getStringExtra("demo_sheet")
+        val demoTheme = intent?.getStringExtra("demo_theme")
+        setContent { LauncherApp(demoSheet = demoSheet, demoTheme = demoTheme) }
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

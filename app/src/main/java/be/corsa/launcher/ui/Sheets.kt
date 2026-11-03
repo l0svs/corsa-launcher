@@ -85,6 +85,7 @@ fun BoxScope.SheetHost(
     sunset: Long,
     onClose: () -> Unit,
     onOpen: (Sheet) -> Unit,
+    previewApps: List<AppEntry>? = null,
 ) {
     val tall = sheet == Sheet.Settings || sheet == Sheet.Vehicle || sheet == Sheet.Search
     val place = if (tall) {
@@ -99,7 +100,7 @@ fun BoxScope.SheetHost(
             .padding(22.dp),
     ) {
         when (sheet) {
-            Sheet.Apps -> AppsSheet(p, onClose, onSettings = { onOpen(Sheet.Settings) })
+            Sheet.Apps -> AppsSheet(p, onClose, onSettings = { onOpen(Sheet.Settings) }, initial = previewApps)
             Sheet.Search -> SearchSheet(p, prefs, onClose)
             Sheet.Music -> MusicSheet(p, now, onClose)
             Sheet.Settings -> SettingsSheet(p, prefs, sunrise, sunset, onClose)
@@ -109,11 +110,11 @@ fun BoxScope.SheetHost(
 }
 
 @Composable
-private fun ColumnScope.AppsSheet(p: Palette, onClose: () -> Unit, onSettings: () -> Unit) {
+private fun ColumnScope.AppsSheet(p: Palette, onClose: () -> Unit, onSettings: () -> Unit, initial: List<AppEntry>? = null) {
     val context = LocalContext.current
-    var apps by remember { mutableStateOf<List<AppEntry>?>(null) }
+    var apps by remember { mutableStateOf(initial) }
     LaunchedEffect(Unit) {
-        apps = withContext(Dispatchers.Default) { Apps.load(context) }
+        if (initial == null) apps = withContext(Dispatchers.Default) { Apps.load(context) }
     }
     SheetHeader("Applis", p, onClose = onClose)
     Spacer(Modifier.height(16.dp))

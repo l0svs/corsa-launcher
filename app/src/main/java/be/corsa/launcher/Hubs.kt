@@ -146,6 +146,19 @@ object MediaHub {
         return if (durationMs > 0) p.coerceIn(0L, durationMs) else p.coerceAtLeast(0L)
     }
 
+    /** Remplit un morceau fictif, uniquement pour les captures d'écran. */
+    fun preview(title: String, artist: String, app: String, isPlaying: Boolean, duration: Long, position: Long) {
+        granted = true
+        this.title = title
+        this.artist = artist
+        appName = app
+        playing = isPlaying
+        durationMs = duration
+        posMs = position
+        posAt = SystemClock.elapsedRealtime()
+        speed = 0f
+    }
+
     fun playPause() {
         val c = controller ?: return
         if (playing) c.transportControls.pause() else c.transportControls.play()

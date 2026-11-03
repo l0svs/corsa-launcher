@@ -82,6 +82,7 @@ jobs:
         run: cp app/build/outputs/apk/release/app-release.apk corsa-launcher.apk
 
       - name: Créer la release GitHub
+        id: release
         if: steps.build.outcome == 'success' && env.KEYSTORE_BASE64 != ''
         uses: softprops/action-gh-release@v2
         with:
@@ -92,3 +93,46 @@ jobs:
           body: |
             Télécharger sur l'autoradio : ouvre https://github.com/${{ github.repository }}/releases/latest/download/corsa-launcher.apk
             puis installe le fichier par-dessus la version précédente.
+
+  screenshots:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Récupérer l'APK compilé
+        uses: actions/download-artifact@v4
+        with:
+          name: corsa-launcher
+          path: apk
+
+      - name: Activer l'accélération de l'émulateur
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Prendre les captures sur un émulateur Android (1280 x 720)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash ci/screenshots.sh
+
+      - name: Publier les captures (branche screenshots)
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p shots
+          echo "run: ${{ github.run_number }}" > shots/status.txt
+          echo "commit: ${{ github.sha }}" >> shots/status.txt
+          cd shots
+          git init -q
+          git checkout -q -b screenshots
+          git add -A
+          git -c user.name="ci" -c user.email="ci@users.noreply.github.com" commit -q -m "Captures de la compilation ${{ github.run_number }}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" screenshots
