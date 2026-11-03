@@ -44,6 +44,13 @@ object Apps {
         return carPlayHints.any { s.contains(it) }
     }
 
+    /** Vraie icône d'une appli installée, ou null si elle n'est pas sur l'autoradio. */
+    fun icon(context: Context, pkg: String, sizePx: Int = 128): ImageBitmap? = try {
+        context.packageManager.getApplicationIcon(pkg).toBitmap(sizePx, sizePx).asImageBitmap()
+    } catch (e: Exception) {
+        null
+    }
+
     fun isInstalled(context: Context, pkg: String): Boolean =
         context.packageManager.getLaunchIntentForPackage(pkg) != null
 

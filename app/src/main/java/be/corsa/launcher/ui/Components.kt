@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -24,8 +25,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -33,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import be.corsa.launcher.Apps
 import be.corsa.launcher.MediaHub
 
 /** Carte blanche (ou sombre) arrondie avec un fin contour. */
@@ -92,6 +96,7 @@ fun PillButton(
     modifier: Modifier = Modifier,
     selected: Boolean = false,
     icon: ImageVector? = null,
+    image: ImageBitmap? = null,
     textColor: Color? = null,
     onClick: () -> Unit,
 ) {
@@ -107,7 +112,10 @@ fun PillButton(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
     ) {
-        if (icon != null) {
+        if (image != null) {
+            Image(bitmap = image, contentDescription = null, modifier = Modifier.size(26.dp).clip(RoundedCornerShape(7.dp)))
+            androidx.compose.foundation.layout.Spacer(Modifier.size(10.dp))
+        } else if (icon != null) {
             Icon(icon, contentDescription = null, tint = fg, modifier = Modifier.size(22.dp))
             androidx.compose.foundation.layout.Spacer(Modifier.size(8.dp))
         }
@@ -126,25 +134,54 @@ fun SheetHeader(title: String, p: Palette, subtitle: String? = null, onClose: ()
     }
 }
 
-/** Pochette du morceau en cours, ou un carré de couleur si l'appli n'en fournit pas. */
+/** Vraie icône d'une appli installée sur l'autoradio (null si absente). */
+@Composable
+fun rememberAppIcon(pkg: String?): ImageBitmap? {
+    val context = LocalContext.current
+    return remember(pkg) { pkg?.let { Apps.icon(context, it) } }
+}
+
+/**
+ * Pochette du morceau en cours, avec l'icône de l'appli qui joue (Spotify, Apple Music…) en badge.
+ * Sans pochette, l'icône de l'appli prend toute la place.
+ */
 @Composable
 fun Artwork(p: Palette, size: Dp, radius: Dp = 12.dp) {
     val bitmap = MediaHub.art
     val image = remember(bitmap) { bitmap?.asImageBitmap() }
+    val appIcon = rememberAppIcon(MediaHub.pkg)
     val shape = RoundedCornerShape(radius)
-    if (image != null) {
-        Image(
-            bitmap = image,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.size(size).clip(shape),
-        )
-    } else {
-        Box(
-            modifier = Modifier.size(size).clip(shape).background(p.accent),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icons.Rounded.MusicNote, contentDescription = null, tint = Color.White, modifier = Modifier.size(size / 2))
+    Box(Modifier.size(size)) {
+        when {
+            image != null -> Image(
+                bitmap = image,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().clip(shape),
+            )
+            appIcon != null -> Box(
+                modifier = Modifier.fillMaxSize().clip(shape).background(p.pill),
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(bitmap = appIcon, contentDescription = null, modifier = Modifier.fillMaxSize(0.72f))
+            }
+            else -> Box(
+                modifier = Modifier.fillMaxSize().clip(shape).background(p.accent),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Rounded.MusicNote, contentDescription = null, tint = Color.White, modifier = Modifier.size(size / 2))
+            }
+        }
+        if (image != null && appIcon != null) {
+            Image(
+                bitmap = appIcon,
+                contentDescription = null,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(size * 0.34f)
+                    .clip(CircleShape)
+                    .border(2.dp, p.card, CircleShape),
+            )
         }
     }
 }

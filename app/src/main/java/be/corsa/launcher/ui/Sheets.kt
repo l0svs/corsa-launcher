@@ -131,11 +131,15 @@ private fun ColumnScope.AppsSheet(p: Palette, onClose: () -> Unit, onSettings: (
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
-            SpecialTile("CarPlay", Icons.Rounded.PhoneIphone, Color(0xFF2B2F36), p) {
-                if (carPlay == null || !Apps.launch(context, carPlay.pkg)) {
+            if (carPlay != null) {
+                AppTile(carPlay.copy(label = "CarPlay"), p) {
+                    if (!Apps.launch(context, carPlay.pkg)) Apps.toast(context, "Impossible d'ouvrir CarPlay")
+                    onClose()
+                }
+            } else {
+                SpecialTile("CarPlay", Icons.Rounded.PhoneIphone, Color(0xFF2B2F36), p) {
                     Apps.toast(context, "Appli CarPlay introuvable : envoie-moi son nom (Paramètres › Applications)")
                 }
-                onClose()
             }
         }
         item {
@@ -190,7 +194,18 @@ private fun SearchSheet(p: Palette, prefs: Prefs, onClose: () -> Unit) {
         onClose()
     }
     val appName = if (prefs.navApp == "maps") "Google Maps" else "Waze"
-    SheetHeader("Où allez-vous ?", p, subtitle = "Le guidage s'ouvre dans $appName", onClose = onClose)
+    val navIcon = rememberAppIcon(if (prefs.navApp == "maps") Apps.GOOGLE_MAPS else Apps.WAZE)
+    SheetHeader("Où allez-vous ?", p, onClose = onClose)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (navIcon != null) {
+            Image(bitmap = navIcon, contentDescription = null, modifier = Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)))
+            Spacer(Modifier.width(8.dp))
+        }
+        Text(
+            if (navIcon != null) "Le guidage s'ouvre dans $appName" else "$appName n'est pas installée : choisis une autre appli dans Réglages",
+            color = p.sub, fontSize = 14.sp, fontWeight = FontWeight.Medium,
+        )
+    }
     Spacer(Modifier.height(14.dp))
     OutlinedTextField(
         value = query,
@@ -339,14 +354,16 @@ private fun SettingsSheet(p: Palette, prefs: Prefs, sunrise: Long, sunset: Long,
         )
 
         Label("Appli de navigation", p)
+        val wazeIcon = rememberAppIcon(Apps.WAZE)
+        val mapsIcon = rememberAppIcon(Apps.GOOGLE_MAPS)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PillButton(
-                "Waze" + if (Apps.isInstalled(context, Apps.WAZE)) "" else " (non installée)",
-                p, Modifier.weight(1f), selected = prefs.navApp == "waze",
+                "Waze" + if (wazeIcon != null) "" else " (non installée)",
+                p, Modifier.weight(1f), selected = prefs.navApp == "waze", image = wazeIcon,
             ) { prefs.navApp = "waze" }
             PillButton(
-                "Google Maps" + if (Apps.isInstalled(context, Apps.GOOGLE_MAPS)) "" else " (non installée)",
-                p, Modifier.weight(1f), selected = prefs.navApp == "maps",
+                "Google Maps" + if (mapsIcon != null) "" else " (non installée)",
+                p, Modifier.weight(1f), selected = prefs.navApp == "maps", image = mapsIcon,
             ) { prefs.navApp = "maps" }
         }
 
