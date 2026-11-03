@@ -9,8 +9,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -129,4 +132,10 @@ private fun enableLocation(context: Context, map: MapLibreMap, style: Style, ctr
     } catch (e: Exception) {
         ctrl.locationActive = false
     }
+}
+
+/** Fond de carte neutre, affiché à la place de MapLibre dans les aperçus d'écran. */
+@Composable
+fun MapPreview(p: Palette, modifier: Modifier) {
+    Box(modifier.background(if (p.isDay) androidx.compose.ui.graphics.Color(0xFFE8EBEE) else androidx.compose.ui.graphics.Color(0xFF1B1E23)))
 }
